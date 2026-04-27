@@ -51,10 +51,13 @@ class LMSQuizSubmission(Document):
 
 	def notify_member(self):
 		if self.score != 0 and self.has_value_changed("score"):
+			# subject is rendered as plain text in both the desk bell and the
+			# portal bell — keep it tag-free. email_content is rendered as HTML
+			# (used in the email body) so frappe.bold is fine there.
 			notification = frappe._dict(
 				{
 					"subject": _("You have got a score of {0} for the quiz {1}").format(
-						(frappe.bold(self.score)), frappe.bold(self.quiz_title)
+						self.score, self.quiz_title
 					),
 					"email_content": _(
 						"There has been an update on your submission. You have got a score of {0} for the quiz {1}"
