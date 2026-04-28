@@ -7,14 +7,14 @@
 		<div class="relative z-20">
 			<!-- Dropdown menu -->
 			<div
-				class="fixed bottom-16 right-2 w-[80%] rounded-md bg-surface-white text-base p-5 space-y-4 shadow-md"
+				class="fixed bottom-16 end-2 w-[80%] rounded-md bg-surface-white text-base p-5 space-y-4 shadow-md"
 				v-if="showMenu"
 				ref="menu"
 			>
 				<div
 					v-for="link in otherLinks"
 					:key="link.label"
-					class="flex items-center space-x-2 cursor-pointer"
+					class="flex items-center gap-x-2 cursor-pointer"
 					@click="handleClick(link)"
 				>
 					<component
@@ -28,7 +28,7 @@
 			<!-- Fixed menu -->
 			<div
 				v-if="sidebarSettings.data"
-				class="fixed bottom-0 left-0 w-full flex items-center justify-around border-t border-outline-gray-2 bg-surface-white standalone:pb-4 z-10"
+				class="fixed bottom-0 start-0 w-full flex items-center justify-around border-t border-outline-gray-2 bg-surface-white standalone:pb-4 z-10"
 			>
 				<button
 					v-for="tab in sidebarLinks"
@@ -57,7 +57,7 @@
 import { getSidebarLinks } from '@/utils'
 import { useRouter } from 'vue-router'
 import { call } from 'frappe-ui'
-import { watch, ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { sessionStore } from '@/stores/session'
 import { useSettings } from '@/stores/settings'
 import { usersStore } from '@/stores/user'
@@ -68,25 +68,12 @@ let { isLoggedIn } = sessionStore()
 const { sidebarSettings } = useSettings()
 const router = useRouter()
 let { userResource } = usersStore()
-const sidebarLinks = ref(getSidebarLinks())
+const sidebarLinks = ref([])
 const otherLinks = ref([])
 const showMenu = ref(false)
 const menu = ref(null)
 const isModerator = ref(false)
 const isInstructor = ref(false)
-
-onMounted(() => {
-	sidebarSettings.reload(
-		{},
-		{
-			onSuccess(data) {
-				destructureSidebarLinks()
-				filterLinksToShow(data)
-				addOtherLinks()
-			},
-		}
-	)
-})
 
 const handleOutsideClick = (e) => {
 	if (menu.value && !menu.value.contains(e.target)) {
@@ -126,65 +113,57 @@ const filterLinksToShow = (data) => {
 
 const addOtherLinks = () => {
 	if (user) {
-		otherLinks.value.push({
-			label: 'Notifications',
-			icon: 'Bell',
-			to: 'Notifications',
-		})
-		otherLinks.value.push({
-			label: 'Profile',
-			icon: 'UserRound',
-		})
-		otherLinks.value.push({
-			label: 'Log out',
-			icon: 'LogOut',
-		})
+		addLink('Notifications', 'Bell', 'Notifications')
+		addLink('Profile', 'UserRound')
+		addLink('Log out', 'LogOut')
 	} else {
-		otherLinks.value.push({
-			label: 'Log in',
-			icon: 'LogIn',
-		})
+		addLink('Log in', 'LogIn')
 	}
 }
 
-watch(userResource, () => {
-	if (userResource.data) {
-		isModerator.value = userResource.data.is_moderator
-		isInstructor.value = userResource.data.is_instructor
-		addPrograms()
-		if (isModerator.value || isInstructor.value) {
-			addProgrammingExercises()
-			addQuizzes()
-			addAssignments()
+const addLink = (label, icon, to = '') => {
+	if (otherLinks.value.some((link) => link.label === label)) return
+	otherLinks.value.push({
+		label: label,
+		icon: icon,
+		to: to,
+	})
+}
+
+const updateSidebarLinks = () => {
+	sidebarLinks.value = getSidebarLinks(true)
+	destructureSidebarLinks()
+	sidebarSettings.reload(
+		{},
+		{
+			onSuccess: async (data) => {
+				filterLinksToShow(data)
+				await addPrograms()
+				if (isModerator.value || isInstructor.value) {
+					addQuizzes()
+					addAssignments()
+					addProgrammingExercises()
+				}
+				addOtherLinks()
+			},
 		}
-	}
-})
+	)
+}
 
 const addQuizzes = () => {
-	otherLinks.value.push({
-		label: 'Quizzes',
-		icon: 'CircleHelp',
-		to: 'Quizzes',
-	})
+	addLink('Quizzes', 'CircleHelp', 'Quizzes')
 }
 
 const addAssignments = () => {
-	otherLinks.value.push({
-		label: 'Assignments',
-		icon: 'Pencil',
-		to: 'Assignments',
-	})
+	addLink('Assignments', 'Pencil', 'Assignments')
 }
 
 const addProgrammingExercises = () => {
-	otherLinks.value.push({
-		label: 'Programming Exercises',
-		icon: 'Code',
-		to: 'ProgrammingExercises',
-	})
+	addLink('Programming Exercises', 'Code', 'ProgrammingExercises')
 }
 
 const addPrograms = async () => {
+	if (sidebarLinks.value.some((link) => link.label === 'Programs')) return
 	let canAddProgram = await checkIfCanAddProgram()
 	if (!canAddProgram) return
 	let activeFor = ['Programs', 'ProgramDetail']
@@ -198,7 +177,21 @@ const addPrograms = async () => {
 	})
 }
 
+watch(
+	userResource,
+	async () => {
+		await userResource.promise
+		if (userResource.data) {
+			isModerator.value = userResource.data.is_moderator
+			isInstructor.value = userResource.data.is_instructor
+		}
+		updateSidebarLinks()
+	},
+	{ immediate: true }
+)
+
 const checkIfCanAddProgram = async () => {
+	if (!userResource.data) return false
 	if (isModerator.value || isInstructor.value) {
 		return true
 	}

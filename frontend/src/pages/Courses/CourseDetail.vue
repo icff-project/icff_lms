@@ -4,7 +4,7 @@
 			class="sticky top-0 z-10 flex items-center justify-between border-b bg-surface-white px-3 py-2.5 sm:px-5"
 		>
 			<Breadcrumbs class="h-7" :items="breadcrumbs" />
-			<div v-if="tabIndex == 2 && isAdmin" class="flex items-center space-x-2">
+			<div v-if="tabIndex == 2 && isAdmin" class="flex items-center gap-x-2">
 				<Badge v-if="childRef?.isDirty" theme="orange">
 					{{ __('Not Saved') }}
 				</Badge>
@@ -156,20 +156,17 @@ const isAdmin = computed(() => {
 const exportCourse = async () => {
 	try {
 		const response = await fetch(
-			'/api/method/lms.lms.api.export_course_as_zip',
+			'/api/method/lms.lms.api.export_course_as_zip?course_name=' +
+				course.data.name,
 			{
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					course_name: course.data.name,
-				}),
+				method: 'GET',
 				credentials: 'include',
 			}
 		)
 
 		if (!response.ok) {
+			const errorText = await response.text()
+			console.error('Error response:', errorText)
 			throw new Error('Download failed')
 		}
 

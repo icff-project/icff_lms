@@ -63,7 +63,7 @@
 						<span class="text-ink-gray-5 uppercase text-xs">
 							{{ __('Enter a Coupon Code') }}:
 						</span>
-						<div class="flex items-center space-x-2">
+						<div class="flex items-center gap-x-2">
 							<FormControl
 								v-model="appliedCoupon"
 								:disabled="orderSummary.data.discount_amount > 0"
@@ -103,7 +103,7 @@
 					</p>
 				</div>
 
-				<div class="flex-1 lg:mr-10">
+				<div class="flex-1 lg:me-10">
 					<div class="mb-5">
 						<div class="text-lg font-semibold text-ink-gray-9">
 							{{ __('Address') }}
@@ -199,8 +199,15 @@
 								}}
 							</div>
 						</div>
-						<Button variant="solid" size="md" @click="generatePaymentLink()">
-							{{ __('Proceed to Payment') }}
+						<Button
+							variant="solid"
+							size="md"
+							class="ms-auto"
+							@click="generatePaymentLink()"
+						>
+							{{
+								isZeroAmount ? __('Enroll for Free') : __('Proceed to Payment')
+							}}
 						</Button>
 					</div>
 				</div>
@@ -326,16 +333,10 @@ const paymentLink = createResource({
 		let data = {
 			doctype: props.type == 'batch' ? 'LMS Batch' : 'LMS Course',
 			docname: props.name,
-			title: orderSummary.data.title,
-			amount: orderSummary.data.original_amount,
-			discount_amount: orderSummary.data.discount_amount || 0,
-			gst_amount: orderSummary.data.gst_applied || 0,
-			currency: orderSummary.data.currency,
 			address: billingDetails,
-			redirect_to: redirectTo.value,
 			payment_for_certificate: props.type == 'certificate',
 			coupon_code: appliedCoupon.value,
-			coupon: orderSummary.data.coupon,
+			country: billingDetails.country,
 		}
 		return data
 	},
@@ -458,14 +459,8 @@ const changeCurrency = (country) => {
 	orderSummary.reload()
 }
 
-const redirectTo = computed(() => {
-	if (props.type == 'course') {
-		return getLmsRoute(`courses/${props.name}`)
-	} else if (props.type == 'batch') {
-		return getLmsRoute(`batches/${props.name}`)
-	} else if (props.type == 'certificate') {
-		return getLmsRoute(`courses/${props.name}/certification`)
-	}
+const isZeroAmount = computed(() => {
+	return orderSummary.data && parseFloat(orderSummary.data.total_amount) <= 0
 })
 
 watch(billingDetails, () => {
