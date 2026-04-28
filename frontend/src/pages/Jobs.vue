@@ -22,17 +22,17 @@
 					<template #prefix>
 						<Plus class="h-4 w-4" />
 					</template>
-					{{ __('New Job') }}
+					{{ __('Create') }}
 				</Button>
 			</router-link>
 		</header>
 		<div>
 			<div
-				class="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:items-center justify-between w-full md:w-4/5 mx-auto mb-2 p-5"
+				class="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:items-center justify-between w-full mx-auto mb-2 p-5"
 			>
 				<div class="flex items-center justify-between">
-					<div class="text-xl font-semibold text-ink-gray-9 md:mb-0">
-						{{ __('{0} {1} Jobs').format(jobCount, activeTab) }}
+					<div class="text-lg font-semibold text-ink-gray-9 md:mb-0">
+						{{ __('{0} {1} Jobs').format(jobCount.data ?? 0, activeTab) }}
 					</div>
 					<TabButtons
 						v-if="tabs.length > 1"
@@ -44,7 +44,7 @@
 				</div>
 
 				<div
-					class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-4 md:space-y-0"
+					class="flex flex-col md:flex-row md:items-center md:gap-x-4 space-y-4 md:space-y-0"
 				>
 					<TabButtons
 						v-if="tabs.length > 1"
@@ -53,7 +53,7 @@
 						class="hidden lg:block"
 						@change="updateJobs"
 					/>
-					<div class="flex items-center space-x-4">
+					<div class="flex items-center gap-x-4">
 						<FormControl
 							type="text"
 							:placeholder="__('Search')"
@@ -96,8 +96,11 @@
 					</div>
 				</div>
 			</div>
-			<div v-if="jobs.data?.length" class="w-full md:w-4/5 mx-auto p-5 pt-0">
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+			<div
+				v-if="jobs.data?.length"
+				class="w-full h-[61vh] lg:h-[78vh] overflow-y-auto mx-auto p-5 pt-0"
+			>
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 					<router-link
 						v-for="job in jobs.data"
 						:to="{
@@ -110,7 +113,19 @@
 					</router-link>
 				</div>
 			</div>
-			<EmptyState v-else type="Job Openings" />
+			<div v-else class="h-[32vh] lg:h-[50vh] px-5">
+				<EmptyState type="Job Openings" />
+			</div>
+			<div class="flex items-center justify-end gap-x-3 border-t pt-3 px-5">
+				<Button v-if="jobs.hasNextPage" @click="jobs.next()">
+					{{ __('Load More') }}
+				</Button>
+				<div v-if="jobs.hasNextPage" class="h-8 border-s"></div>
+				<div class="text-ink-gray-5">
+					{{ jobs.data?.length }} {{ __('of') }}
+					{{ jobCount.data ?? 0 }}
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
@@ -119,6 +134,7 @@ import {
 	Button,
 	Breadcrumbs,
 	call,
+	createListResource,
 	createResource,
 	FormControl,
 	TabButtons,
@@ -141,7 +157,6 @@ const searchQuery = ref('')
 const country = ref(null)
 const filters = ref({})
 const orFilters = ref({})
-const jobCount = ref(0)
 const closedJobs = ref(0)
 const activeTab = ref('Open')
 const readOnlyMode = window.read_only_mode
@@ -157,9 +172,7 @@ const isModerator = computed(() => {
 })
 
 const getClosedJobCount = () => {
-	if (!user.data?.name) {
-		return
-	}
+	if (!user.data?.name) return
 
 	const filters = {
 		status: 'Closed',
@@ -177,6 +190,17 @@ const getClosedJobCount = () => {
 	})
 }
 
+const jobCount = createResource({
+	url: 'lms.lms.api.get_job_opportunities_count',
+	cache: ['jobCount'],
+	makeParams() {
+		return {
+			filters: filters.value,
+			or_filters: orFilters.value,
+		}
+	},
+})
+
 const setFiltersFromURL = () => {
 	let queries = new URLSearchParams(location.search)
 	if (queries.has('type')) {
@@ -186,6 +210,76 @@ const setFiltersFromURL = () => {
 		workMode.value = queries.get('work_mode')
 	}
 }
+
+const jobs = createListResource({
+	url: 'lms.lms.api.get_job_opportunities',
+	doctype: 'Job Opportunity',
+	start: 0,
+	cache: ['jobs'],
+	pageLength: 40,
+})
+
+const updateJobs = () => {
+	updateFilters()
+	jobs.update({
+		filters: filters.value,
+		orFilters: orFilters.value,
+	})
+	jobs.reload()
+	jobCount.reload()
+}
+
+const updateFilters = () => {
+	filters.value.status = activeTab.value === 'Open' ? 'Open' : 'Closed'
+	updateJobTypeFilter()
+	updateWorkModeFilter()
+	updateSearchQueryFilter()
+	updateCountryFilter()
+}
+
+const updateJobTypeFilter = () => {
+	if (jobType.value && jobType.value !== ' ') {
+		filters.value.type = jobType.value
+	} else {
+		delete filters.value.type
+	}
+}
+
+const updateWorkModeFilter = () => {
+	if (workMode.value && workMode.value !== ' ') {
+		filters.value.work_mode = workMode.value
+	} else {
+		delete filters.value.work_mode
+	}
+}
+
+const updateSearchQueryFilter = () => {
+	if (searchQuery.value) {
+		orFilters.value = {
+			job_title: ['like', `%${searchQuery.value}%`],
+			company_name: ['like', `%${searchQuery.value}%`],
+			location: ['like', `%${searchQuery.value}%`],
+		}
+	} else {
+		orFilters.value = {}
+	}
+}
+
+const updateCountryFilter = () => {
+	if (country.value) {
+		filters.value.country = country.value
+	} else {
+		delete filters.value.country
+	}
+}
+
+watch(activeTab, (val) => {
+	updateJobs()
+})
+
+watch(country, (val) => {
+	updateJobs()
+})
 
 const tabs = computed(() => {
 	const tabsArray = [
@@ -203,76 +297,6 @@ const tabs = computed(() => {
 	return tabsArray
 })
 
-const jobs = createResource({
-	url: 'lms.lms.api.get_job_opportunities',
-	cache: ['jobs'],
-})
-
-const updateJobs = () => {
-	updateFilters()
-	jobs.update({
-		params: {
-			filters: filters.value,
-			orFilters: orFilters.value,
-		},
-	})
-	jobs.reload()
-}
-
-const updateFilters = () => {
-	filters.value.status = 'Open'
-
-	if (jobType.value && jobType.value !== ' ') {
-		filters.value.type = jobType.value
-	} else {
-		delete filters.value.type
-	}
-
-	if (workMode.value && workMode.value !== ' ') {
-		filters.value.work_mode = workMode.value
-	} else {
-		delete filters.value.work_mode
-	}
-
-	if (searchQuery.value) {
-		orFilters.value = {
-			job_title: ['like', `%${searchQuery.value}%`],
-			company_name: ['like', `%${searchQuery.value}%`],
-			location: ['like', `%${searchQuery.value}%`],
-		}
-	} else {
-		orFilters.value = {}
-	}
-
-	if (country.value) {
-		filters.value.country = country.value
-	} else {
-		delete filters.value.country
-	}
-
-	if (activeTab.value === 'Closed') {
-		filters.value.status = 'Closed'
-		if (!isModerator.value) {
-			filters.value.owner = user.data?.name
-		}
-	} else {
-		filters.value.status = 'Open'
-		delete filters.value.owner
-	}
-}
-
-watch(activeTab, (val) => {
-	updateJobs()
-})
-
-watch(country, (val) => {
-	updateJobs()
-})
-
-watch(jobs, () => {
-	jobCount.value = jobs.data?.length || 0
-})
-
 const jobTypes = computed(() => {
 	return [
 		{ label: ' ', value: ' ' },
@@ -286,9 +310,9 @@ const jobTypes = computed(() => {
 const workModes = computed(() => {
 	return [
 		{ label: ' ', value: ' ' },
-		{ label: 'On site', value: 'On-site' },
-		{ label: 'Hybrid', value: 'Hybrid' },
-		{ label: 'Remote', value: 'Remote' },
+		{ label: __('On-site'), value: 'On-site' },
+		{ label: __('Hybrid'), value: 'Hybrid' },
+		{ label: __('Remote'), value: 'Remote' },
 	]
 })
 

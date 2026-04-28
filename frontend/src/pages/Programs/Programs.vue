@@ -10,7 +10,7 @@
 			{{ __('New') }}
 		</Button>
 	</header>
-	<div v-if="programs.data?.length && !isStudent" class="py-10 w-3/4 mx-auto">
+	<div v-if="programs.data?.length && !isStudent" class="py-10 px-5">
 		<div class="text-lg font-semibold text-ink-gray-9 mb-5">
 			{{
 				__('{0} {1}').format(
@@ -19,7 +19,7 @@
 				)
 			}}
 		</div>
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
 			<div
 				v-for="program in programs.data"
 				@click="openForm(program.name)"
@@ -28,15 +28,15 @@
 				<div class="text-lg font-semibold text-ink-gray-9">
 					{{ program.name }}
 				</div>
-				<div class="flex items-center space-x-1 text-ink-gray-7">
-					<BookOpen class="h-4 w-4 stroke-1.5 mr-1" />
+				<div class="flex items-center gap-x-2 text-ink-gray-7">
+					<BookOpen class="h-4 w-4 stroke-1.5" />
 					<span>
 						{{ program.course_count }}
 						{{ program.course_count == 1 ? __('Course') : __('Courses') }}
 					</span>
 				</div>
-				<div class="flex items-center space-x-1 text-ink-gray-7">
-					<User class="h-4 w-4 stroke-1.5 mr-1" />
+				<div class="flex items-center gap-x-2 text-ink-gray-7">
+					<User class="h-4 w-4 stroke-1.5" />
 					<span>
 						{{ program.member_count || 0 }}
 						{{ program.member_count == 1 ? __('member') : __('members') }}
