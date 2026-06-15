@@ -13,6 +13,10 @@ import Paragraph from '@editorjs/paragraph'
 import { CodeBox } from '@/utils/code'
 import NestedList from '@editorjs/nested-list'
 import InlineCode from '@editorjs/inline-code'
+import { Underline } from '@/utils/inline/Underline'
+import { Strikethrough } from '@/utils/inline/Strikethrough'
+import { AlignLeft, AlignCenter, AlignRight } from '@/utils/inline/TextAlign'
+import { Color } from '@/utils/inline/Color'
 import dayjs from '@/utils/dayjs'
 import Embed from '@editorjs/embed'
 import SimpleImage from '@editorjs/simple-image'
@@ -117,7 +121,22 @@ export function htmlToText(html) {
 	return div.textContent || div.innerText || ''
 }
 
-export function getEditorTools() {
+// Visual order of the inline toolbar (automad layout). References registered
+// inline-tool names: EditorJS built-ins (bold/italic/link) + our custom tools.
+const INLINE_TOOLBAR_ORDER = [
+	'alignLeft',
+	'alignCenter',
+	'alignRight',
+	'bold',
+	'italic',
+	'link',
+	'inlineCode',
+	'underline',
+	'strikeThrough',
+	'color',
+]
+
+export function getEditorTools(isInstructorEditor = false, uploadContext = {}) {
 	return {
 		header: {
 			class: Header,
@@ -127,27 +146,30 @@ export function getEditorTools() {
 		},
 		list: {
 			class: NestedList,
-			inlineToolbar: true,
+			inlineToolbar: INLINE_TOOLBAR_ORDER,
 			config: {
 				defaultStyle: 'ordered',
 			},
 		},
-		upload: Upload,
+		upload: {
+			class: Upload,
+			config: uploadContext,
+		},
 		table: {
 			class: Table,
-			inlineToolbar: true,
+			inlineToolbar: INLINE_TOOLBAR_ORDER,
 		},
 		quiz: Quiz,
 		assignment: Assignment,
 		program: Program,
 		markdown: {
 			class: Markdown,
-			inlineToolbar: true,
+			inlineToolbar: INLINE_TOOLBAR_ORDER,
 		},
 		image: SimpleImage,
 		paragraph: {
 			class: Paragraph,
-			inlineToolbar: true,
+			inlineToolbar: INLINE_TOOLBAR_ORDER,
 			config: {
 				preserveBlank: true,
 			},
@@ -162,6 +184,12 @@ export function getEditorTools() {
 			class: InlineCode,
 			shortcut: 'CMD+SHIFT+M',
 		},
+		underline: Underline,
+		strikeThrough: Strikethrough,
+		alignLeft: AlignLeft,
+		alignCenter: AlignCenter,
+		alignRight: AlignRight,
+		color: Color,
 		embed: {
 			class: Embed,
 			inlineToolbar: false,
