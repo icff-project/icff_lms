@@ -4,7 +4,7 @@
 	>
 		<div class="flex gap-x-4 mb-4">
 			<div class="flex flex-col space-y-2 flex-1 break-all">
-				<div class="text-xl-semibold text-ink-gray-9">
+				<div class="text-lg-semibold text-ink-gray-9">
 					{{ job.company_name }}
 				</div>
 				<span class="font-medium text-ink-gray-7 leading-5">
@@ -27,7 +27,7 @@
 					</span>
 				</div>
 			</div>
-			<!-- <img :src="job.company_logo" alt="Company Logo" class="size-8  rounded-full object-contain  bg-white" /> -->
+			<!-- <img :src="job.company_logo" alt="Company Logo" class="size-8  rounded-full object-contain  bg-surface-base" /> -->
 		</div>
 		<div class="flex gap-x-2 items-center mt-auto">
 			<Badge>
@@ -42,11 +42,12 @@
 		</div>
 		<!-- <div
 			class="description text-ink-gray-9 text-sm"
-			v-html="job.description"
+			v-html="sanitizeRichHTML(job.description)"
 		></div> -->
 	</div>
 </template>
 <script setup>
+import { sanitizeRichHTML } from '@/utils/sanitizeRichHTML'
 import { inject } from 'vue'
 import { Badge } from 'frappe-ui'
 

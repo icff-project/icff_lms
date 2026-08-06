@@ -50,17 +50,13 @@
 							/>
 						</Tooltip>
 
-						<div class="space-y-1.5">
-							<label class="block text-ink-gray-5 text-xs" for="batchTimezone">
-								{{ __('Timezone') }}
-								<span class="text-ink-red-6">*</span>
-							</label>
-							<Combobox
-								:modelValue="liveClass.timezone"
-								:options="getTimezoneOptions()"
-								@update:modelValue="(opt) => (liveClass.timezone = opt.value)"
-							/>
-						</div>
+						<Combobox
+							:modelValue="liveClass.timezone"
+							:options="getTimezoneOptions()"
+							:label="__('Timezone')"
+							:required="true"
+							@update:modelValue="(value) => (liveClass.timezone = value)"
+						/>
 						<FormControl
 							v-if="props.conferencingProvider === 'Zoom'"
 							v-model="liveClass.auto_recording"

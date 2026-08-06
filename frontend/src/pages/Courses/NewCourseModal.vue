@@ -2,7 +2,7 @@
 	<Dialog v-model:open="show" title="New Course" size="3xl">
 		<template #default>
 			<div class="text-base">
-				<div class="grid grid-cols-2 gap-5 border-b mb-5">
+				<div class="grid grid-cols-2 gap-5 border-b pb-5 mb-5">
 					<FormControl
 						v-model="course.title"
 						:label="__('Title')"
@@ -30,7 +30,10 @@
 						:onCreate="openMemberModal"
 					>
 						<template #prefix>
-							<div v-if="visibleAvatars.length" class="flex -space-x-1.5">
+							<div
+								v-if="visibleAvatars.length"
+								class="flex -space-x-1.5 rtl:space-x-reverse"
+							>
 								<Avatar
 									v-for="m in visibleAvatars"
 									:key="m.value"
@@ -72,15 +75,15 @@
 						:label="__('Short introduction')"
 						type="textarea"
 						:required="true"
-						:rows="4"
 					/>
 					<div class="space-y-1.5">
-						<FormLabel
+						<InputLabel
+							:id="descriptionLabelId"
+							:for-id="descriptionId"
 							:label="__('Course description')"
-							:id="descriptionId"
 							:required="true"
 						/>
-						<TextEditor
+						<RichTextEditor
 							:id="descriptionId"
 							:content="course.description"
 							@change="(val: string) => (course.description = val)"
@@ -94,7 +97,11 @@
 		</template>
 		<template #actions="{ close }">
 			<div class="text-end">
-				<Button variant="solid" @click="saveCourse(close)">
+				<Button
+					variant="solid"
+					:loading="courses.insert.loading"
+					@click="saveCourse(close)"
+				>
 					{{ __('Save') }}
 				</Button>
 			</div>
@@ -113,28 +120,20 @@ import {
 	Button,
 	Dialog,
 	FormControl,
-	FormLabel,
-	TextEditor,
 	createResource,
 	toast,
 } from 'frappe-ui'
 import { useOnboarding, useTelemetry } from 'frappe-ui/frappe'
-import {
-	computed,
-	inject,
-	onBeforeUnmount,
-	onMounted,
-	ref,
-	useId,
-	watch,
-} from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Link from '@/components/Controls/Link.vue'
 import MultiLink from '@/components/Controls/MultiLink.vue'
 import Uploader from '@/components/Controls/Uploader.vue'
 import NewMemberModal from '@/components/Modals/NewMemberModal.vue'
 import { cleanError, sanitizeHTML, createLMSCategory } from '@/utils'
-import type { Resource } from '@/types/api'
+import type { Resource } from '@/types'
+import RichTextEditor from '@/components/RichTextEditor.vue'
+import { InputLabel, useInputLabeling } from '@/components/Form/labeling'
 
 interface InstructorOption {
 	label: string
@@ -183,9 +182,10 @@ const course = ref<Course>({
 const INSTRUCTOR_ROLES = ['Course Creator', 'Batch Evaluator']
 const MAX_VISIBLE_AVATARS = 3
 const thumbnailGuidelines = __(
-	'Upload a 750×422 image (.jpg, .jpeg, .gif, or .png) — shown on the catalog card and lesson hero.'
+	'Upload a 750×422 image (.jpg, .jpeg, .gif, or .png). Shown on the catalog card and lesson hero.'
 )
-const descriptionId = useId()
+const { inputId: descriptionId, labelId: descriptionLabelId } =
+	useInputLabeling({})
 
 const instructorsRef = ref<{
 	optionByValue: Map<string, InstructorOption>
